@@ -44,6 +44,9 @@ class Node:
     def __neg__(self):
         return neg(self)
     
+    def __str__(self) -> str:
+        return str(self.output)
+    
 class Operation(Node):
     def __init__(self,input_nodes=[], name='') -> None:
         super().__init__(name)
@@ -92,9 +95,11 @@ class Variable(Node):
         super().__init__(name)
         self.value=init_val
         _default_graph.vars.append(self)
-    def setto(self,new_value):
-        _default_graph.vars.remove(self)
-        return Variable(new_value)
+    def __str__(self) -> str:
+        return str(self.value)
+    # def setto(self,new_value):
+    #     _default_graph.vars.remove(self)
+    #     return Variable(new_value)
     
 def traverse_postorder(op):
     nodes_postorder=[]

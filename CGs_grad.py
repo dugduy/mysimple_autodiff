@@ -1,4 +1,4 @@
-import numpy as np
+# import numpy as np
 from queue import Queue
 from CGs import *
 _gradient_registry={}
@@ -33,7 +33,7 @@ def _div_gradient(op,grad):
 @RegGrad('pow')
 def _pow_gradient(op,grad):
     a,b=op.inputs
-    return grad*b*a**(b-1),grad*op.output*np.log(a)
+    return grad*b*a**(b-1),1#,grad*op.output*np.log(a)
 
 
 def compute_gradients(op,steps=[]):
@@ -46,7 +46,7 @@ def compute_gradients(op,steps=[]):
             grad_table[node]=0
             for consumer in node.consumers:
                 if consumer in steps:
-                    lossgrad_wrt_input=_gradient_registry[consumer.__class__](consumer,grad_table[consumer])
+                    lossgrad_wrt_input=_gradient_registry[consumer.__class__](consumer,grad_table.get(consumer,0))
                     if len(consumer.input_nodes)>1:
                         lossgrad_wrt_input=lossgrad_wrt_input[consumer.input_nodes.index(node)]
                     grad_table[node]+=lossgrad_wrt_input
