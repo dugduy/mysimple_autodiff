@@ -37,7 +37,8 @@ def _div_gradient(op,grad):
 @RegGrad('pow')
 def _pow_gradient(op,grad):
     a,b=op.inputs
-    return grad*b*a**(b-1),1#,grad*op.output*np.log(a)
+    # return grad*b*a**(b-1),1#,grad*op.output*np.log(a)
+    return grad*b*a**(b-1),grad*op.output*np.log(a)
 
 
 def compute_gradients(op,steps=[]):

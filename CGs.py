@@ -44,6 +44,10 @@ class Node:
         if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
             other=Variable(other)
         return pow(self,other)
+    def __rpow__(self,other):
+        if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
+            other=Variable(other)
+        return pow(other,self)
     def __neg__(self):
         return neg(self)
     
