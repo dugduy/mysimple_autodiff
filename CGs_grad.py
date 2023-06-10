@@ -1,4 +1,3 @@
-# import numpy as np
 from queue import Queue
 from CGs import *
 _gradient_registry={}
@@ -25,6 +24,11 @@ def _mul_gradient(op,grad):
     a,b=op.inputs
     return grad*b,grad*a
 
+@RegGrad('matmul')
+def _matmul_gradient(op,grad):
+    A,B=op.inputs
+    return grad@B.T,A.T@grad
+
 @RegGrad('div')
 def _div_gradient(op,grad):
     a,b=op.inputs
@@ -37,7 +41,7 @@ def _pow_gradient(op,grad):
 
 
 def compute_gradients(op,steps=[]):
-    grad_table={op:1}
+    grad_table={op:np.ones_like(op.output)}
     q=Queue()
     q.put(op)
     while not q.empty():

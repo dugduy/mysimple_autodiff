@@ -1,3 +1,4 @@
+import numpy as np
 class Graph:
     def __init__(self,name='myCGs') -> None:
         self.ops=[]
@@ -31,6 +32,8 @@ class Node:
         return mul(self,other)
     def __rmul__(self,other):
         return self*other
+    def __matmul__(self,other):
+        return matmul(self,other)
     def __truediv__(self,other):
         if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
             other=Variable(other)
@@ -76,6 +79,10 @@ class sub(add):
 class mul(add):
     def compute(self, x_val, y_val):
         return x_val*y_val
+    
+class matmul(add):
+    def compute(self, x_val, y_val):
+        return x_val@y_val
 
 class div(add):
     def compute(self, x_val, y_val):
@@ -122,6 +129,9 @@ class Session:
             else:
                 node.inputs=[i.output for i in node.input_nodes]
                 node.output=node.compute(*node.inputs)
+            
+            if type(node.output)==list:
+                node.output=np.array(node.output)
         
         return op.output
 
