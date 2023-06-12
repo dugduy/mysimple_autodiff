@@ -95,6 +95,18 @@ class div(add):
 class pow(add):
     def compute(self, x_val, y_val):
         return x_val**y_val
+    
+class reduce_sum(Operation):
+    def __init__(self, A, axis=None, keep_dims=False, name='') -> None:
+        super().__init__([A], name)
+        self.axis=axis
+        self.keep_dims=keep_dims
+    def compute(self,A_val):
+        return np.sum(A_val,self.axis,keepdims=self.keep_dims)
+    
+class log(neg):
+    def compute(self, x_val):
+        return np.log(x_val)
 
 class PlaceHolder(Node):
     def __init__(self, name='') -> None:
@@ -134,8 +146,8 @@ class Session:
                 node.inputs=[i.output for i in node.input_nodes]
                 node.output=node.compute(*node.inputs)
             
-            if type(node.output)==list:
-                node.output=np.array(node.output)
+            # if type(node.output)==list:
+            node.output=np.array(node.output)
         
         return op.output
 

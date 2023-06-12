@@ -1,12 +1,19 @@
 from CGs_grad import *
 
-def sigmoid(x):
-    return 1/(1+np.e**-x)
+# def sigmoid(x):
+#     return 1/(1+np.e**-x)
+
+# def softmax(x):
+#     norm_x=np.e**x
+#     return norm_x/reduce_sum(norm_x)
+
+def f(x):
+    return reduce_sum(log(x))
 
 Graph().as_default()
 
-x=Variable([0,1,2,3,4],'x')
-y=sigmoid(x)
+x=Variable([1.,2.,3.,4.],'x')
+y=f(x)
 
 sess=Session()
 print(sess.run(y))

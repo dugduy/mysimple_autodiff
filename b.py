@@ -2,28 +2,22 @@ from CGs_grad import *
 
 Graph().as_default()
 
-A=Variable(
+# x=Variable([[1,2],[3,4],[5,6]],'x')
+# y=reduce_sum(x,1,name='y')
+x=Variable(
     [
         [1,2,3,4],
         [5,6,7,8],
         [9,10,11,12]
-    ],
-    'A'
-)
-
-B=Variable(
-    [
-        [1,2],
-        [3,4],
-        [5,6],
-        [7,8]
     ]
 )
+z=Variable(
+    [1,2,3,4]
+)
 
-C=A@B
+y=x*z
 
 sess=Session()
-output=sess.run(C)
-print(output)
-graded=compute_gradients(C,sess.nodes_postorder)
-print(graded.get(B))
+print(sess.run(y))
+
+print(compute_gradients(y,sess.nodes_postorder)[z])

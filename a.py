@@ -2,7 +2,7 @@ from CGs_grad import *
 
 Graph().as_default()
 
-x=Variable(3,'x')
+x=Variable(3.,'x')
 y=(4*x**2 - 3*x + 2)/(x - 2)
 
 sess=Session()
