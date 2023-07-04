@@ -1,2 +1,2 @@
-import CGs
-from CGs_grad import compute_gradients
+from .CGs import *
+from .CGs_grad import gradients

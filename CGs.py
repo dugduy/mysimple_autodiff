@@ -1,19 +1,9 @@
 from typing import Any
-import numpy as np
-class Graph:
-    def __init__(self,name='myCGs') -> None:
-        self.ops=[]
-        self.vars=[]
-        self.phs=[]
-        self.name=name
-    def as_default(self):
-        global _default_graph
-        _default_graph=self    
+import numpy as np 
 class Operation:
     def __init__(self,input_nodes=[], name='') -> None:
         self.input_nodes=input_nodes
         self.name=name
-        _default_graph.ops.append(self)
     def compute(self):
         pass
 class Neg(Operation):
@@ -81,12 +71,18 @@ class Cast(Operation):
     def compute(self,A_val):
         return A_val.astype(self.dtype)
 
+class Concate(Operation):
+    def __init__(self, input_arrs,axis, name='') -> None:
+        super().__init__(input_arrs, name)
+        self.axis=axis
+    def compute(self,input_values):
+        return np.concatenate(input_values,self.axis)
+
 class Variable:
     def __init__(self,init_val, name='',ops=None) -> None:
         self.name=name
         self.value=np.array(init_val)
         self.ops=ops
-        _default_graph.vars.append(self)
     def __getattr__(self, __name: str) -> Any:
         if __name=='shape':
             return self.value.shape
@@ -184,6 +180,10 @@ def tile(A,reps,name=''):
 def cast(A,dtype='float',name=''):
     cast_obj=Cast(A,dtype,name)
     return Variable(cast_obj.compute(A.value),name,cast_obj)
+@cgsfunc
+def concate(*arrs,axis=0,name=''):
+    cc_obj=Concate(arrs,axis,name)
+    return Variable(cc_obj.compute([arr.value for arr in arrs]),name,cc_obj)
 
 def traverse_postorder(var_obj):
     nodes_postorder=[]
