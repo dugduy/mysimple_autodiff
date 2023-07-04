@@ -1,3 +1,4 @@
+from typing import Any
 import numpy as np
 class Graph:
     def __init__(self,name='myCGs') -> None:
@@ -7,51 +8,7 @@ class Graph:
         self.name=name
     def as_default(self):
         global _default_graph
-        _default_graph=self
-
-# class Node:
-#     def __init__(self,name='') -> None:
-#         self.name=name
-    # def __add__(self,other):
-    #     if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
-    #         other=Variable(other)
-    #     return add(self,other)
-    # def __radd__(self,other):
-    #     return self+other
-    # def __sub__(self,other):
-    #     if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
-    #         other=Variable(other)
-    #     return sub(self,other)
-    # def __rsub__(self,other):
-    #     return -self+other
-    # def __mul__(self,other):
-    #     if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
-    #         other=Variable(other)
-    #     return mul(self,other)
-    # def __rmul__(self,other):
-    #     return self*other
-    # def __matmul__(self,other):
-    #     return matmul(self,other)
-    # def __truediv__(self,other):
-    #     if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
-    #         other=Variable(other)
-    #     return div(self,other)
-    # def __rtruediv__(self,other):
-    #     return div(Variable(other),self)
-    # def __pow__(self,other):
-    #     if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
-    #         other=Variable(other)
-    #     return pow(self,other)
-    # def __rpow__(self,other):
-    #     if not (type(other) in [PlaceHolder,Variable] or isinstance(other,Operation)):   
-    #         other=Variable(other)
-    #     return pow(other,self)
-    # def __neg__(self):
-    #     return neg(self)
-    
-    # def __str__(self) -> str:
-    #     return str(self.output)
-    
+        _default_graph=self    
 class Operation:
     def __init__(self,input_nodes=[], name='') -> None:
         self.input_nodes=input_nodes
@@ -59,7 +16,6 @@ class Operation:
         _default_graph.ops.append(self)
     def compute(self):
         pass
-
 class Neg(Operation):
     def __init__(self, a, name='') -> None:
         super().__init__([a], name)
@@ -118,10 +74,12 @@ class Tile(Operation):
     def compute(self,A_val):
         return np.tile(A_val,self.reps)
 
-# class PlaceHolder(Node):
-#     def __init__(self, name='') -> None:
-#         super().__init__(name)
-#         _default_graph.phs.append(self)
+class Cast(Operation):
+    def __init__(self, A,dtype='float32', name='') -> None:
+        super().__init__([A], name)
+        self.dtype=dtype
+    def compute(self,A_val):
+        return A_val.astype(self.dtype)
 
 class Variable:
     def __init__(self,init_val, name='',ops=None) -> None:
@@ -129,39 +87,36 @@ class Variable:
         self.value=np.array(init_val)
         self.ops=ops
         _default_graph.vars.append(self)
+    def __getattr__(self, __name: str) -> Any:
+        if __name=='shape':
+            return self.value.shape
+        elif __name=='ndim':
+            return self.value.ndim
+        else:
+            raise AttributeError(__name)
+    def astype(self,dtype='float16'):
+        return Variable(self.value.astype(dtype),self.name,ops=self.ops)
     def __add__(self,other):
-        if not (type(other)==Variable):   
-            other=Variable(other)
         return add(self,other)
     def __radd__(self,other):
         return self+other
     def __sub__(self,other):
-        if not (type(other)==Variable):   
-            other=Variable(other)
         return sub(self,other)
     def __rsub__(self,other):
         return -self+other
     def __mul__(self,other):
-        if not (type(other)==Variable):   
-            other=Variable(other)
         return mul(self,other)
     def __rmul__(self,other):
         return self*other
     def __matmul__(self,other):
         return matmul(self,other)
     def __truediv__(self,other):
-        if not (type(other)==Variable):   
-            other=Variable(other)
         return div(self,other)
     def __rtruediv__(self,other):
         return div(Variable(other),self)
     def __pow__(self,other):
-        if not (type(other)==Variable):   
-            other=Variable(other)
         return pow(self,other)
     def __rpow__(self,other):
-        if not (type(other)==Variable):   
-            other=Variable(other)
         return pow(other,self)
     def __neg__(self):
         return neg(self)
@@ -169,52 +124,66 @@ class Variable:
     #     return str(self.value)
     def __repr__(self) -> str:
         return f'Variable({self.value},name="{self.name}")'
-    
 
+def cgsfunc(func):
+    def wrapper(*args,**kvagrs):
+        input_nodes=[]
+        for arg in args:
+            if not type(arg)==Variable:
+                input_nodes.append(Variable(arg))
+            else:
+                input_nodes.append(arg)
+        return func(*input_nodes,**kvagrs)
+    return wrapper
 
+@cgsfunc
 def reduce_sum(A,axis=None,keep_dims=False,name=''):
     sum_obj=Reduce_sum(A,axis,keep_dims,name)
     return Variable(sum_obj.compute(A.value),name,sum_obj)
-
+@cgsfunc
 def neg(a,name=''):
     neg_obj=Neg(a,name+'_ops')
     return Variable(neg_obj.compute(a.value),name,neg_obj)
-
+@cgsfunc
 def log(a,name=''):
     log_obj=Log(a,name+'_ops')
     return Variable(log_obj.compute(a.value),name,log_obj)
-
+@cgsfunc
 def add(a,b,name=''):
     add_obj=Add(a,b,name+'_ops')
     return Variable(add_obj.compute(a.value,b.value),name,add_obj)
-
+@cgsfunc
 def sub(a,b,name=''):
     sub_obj=Sub(a,b,name+'_ops')
     return Variable(sub_obj.compute(a.value,b.value),name,sub_obj)
-
+@cgsfunc
 def mul(a,b,name=''):
     mul_obj=Mul(a,b,name+'_ops')
     return Variable(mul_obj.compute(a.value,b.value),name,mul_obj)
-
+@cgsfunc
 def div(a,b,name=''):
     div_obj=Div(a,b,name+'_ops')
     return Variable(div_obj.compute(a.value,b.value),name,div_obj)
-
+@cgsfunc
 def pow(a,b,name=''):
     pow_obj=Pow(a,b,name+'_ops')
     return Variable(pow_obj.compute(a.value,b.value),name,pow_obj)
-
+@cgsfunc
 def matmul(A,B,name=''):
     matmul_obj=Matmul(A,B,name+'_ops')
     return Variable(matmul_obj.compute(A.value,B.value),name,matmul_obj)
-
+@cgsfunc
 def expand_dims(A,axis=0,name=''):
     exp_dim_obj=Expandim(A,axis,name+'_ops')
     return Variable(exp_dim_obj.compute(A.value),name,exp_dim_obj)
-
+@cgsfunc
 def tile(A,reps,name=''):
     tile_obj=Tile(A,reps,name+'_ops')
     return Variable(tile_obj.compute(A.value),name,tile_obj)
+@cgsfunc
+def cast(A,dtype='float',name=''):
+    cast_obj=Cast(A,dtype,name)
+    return Variable(cast_obj.compute(A.value),name,cast_obj)
 
 def traverse_postorder(var_obj):
     nodes_postorder=[]
