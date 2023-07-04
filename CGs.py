@@ -78,6 +78,13 @@ class Concate(Operation):
     def compute(self,input_values):
         return np.concatenate(input_values,self.axis)
 
+class Transpose(Operation):
+    def __init__(self, A,new_dim_index, name='') -> None:
+        super().__init__([A], name)
+        self.new_dim_index=new_dim_index
+    def compute(self,A_val):
+        return np.transpose(A_val,self.new_dim_index)
+
 class Variable:
     def __init__(self,init_val, name='',ops=None) -> None:
         self.name=name
@@ -88,6 +95,10 @@ class Variable:
             return self.value.shape
         elif __name=='ndim':
             return self.value.ndim
+        elif __name=='T':
+            dims=list(range(self.ndim))
+            dims[-2],dims[-1]=dims[-1],dims[-2]
+            return transpose(self,new_dim_index=dims)
         else:
             raise AttributeError(__name)
     def astype(self,dtype='float16'):
@@ -188,12 +199,16 @@ def tile(A,reps,name=''):
     return Variable(tile_obj.compute(A.value),name,tile_obj)
 @cgsfunc
 def cast(A,dtype='float',name=''):
-    cast_obj=Cast(A,dtype,name)
+    cast_obj=Cast(A,dtype,name+'_ops')
     return Variable(cast_obj.compute(A.value),name,cast_obj)
+# @cgsfunc
+# def concate(*arrs,axis=0,name=''):
+#     cc_obj=Concate(arrs,axis,name)
+#     return Variable(cc_obj.compute([arr.value for arr in arrs]),name,cc_obj)
 @cgsfunc
-def concate(*arrs,axis=0,name=''):
-    cc_obj=Concate(arrs,axis,name)
-    return Variable(cc_obj.compute([arr.value for arr in arrs]),name,cc_obj)
+def transpose(A,new_dim_index,name=''):
+    T_obj=Transpose(A,new_dim_index,name+'_ops')
+    return Variable(T_obj.compute(A.value),name,T_obj)
 
 def traverse_postorder(var_obj):
     nodes_postorder=[]

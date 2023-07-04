@@ -78,10 +78,12 @@ def _tile_gradient(op,grad):
 @RegGrad('Cast')
 def _cast_gradient(op,grad):
     return [cast(grad,dtype=op.dtype)]
-@RegGrad('Concate')
-def _concat_gradient(op,grad):
-    arrs=op.input_nodes
-    pass # don't use concate
+@RegGrad('Transpose')
+def _transpose_gradient(op,grad):
+    reT=np.zeros(len(op.new_dim_index),'int')
+    for i, dim in enumerate(op.new_dim_index):
+        reT[dim]=i
+    return [transpose(grad,new_dim_index=reT)]
 
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}
