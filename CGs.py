@@ -92,6 +92,16 @@ class Variable:
             raise AttributeError(__name)
     def astype(self,dtype='float16'):
         return Variable(self.value.astype(dtype),self.name,ops=self.ops)
+    def assign(self,value):
+        if type(value)==Variable:
+            value=value.value
+        self.value=value
+    def assign_add(self,add_val):
+        if type(add_val)==Variable:
+            add_val=add_val.value
+        self.value+=add_val
+    def assign_sub(self,sub_val):
+        self.assign_add(-sub_val)
     def __add__(self,other):
         return add(self,other)
     def __radd__(self,other):
