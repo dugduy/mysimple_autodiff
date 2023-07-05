@@ -13,7 +13,7 @@ class RegGrad:
                             crgrad=reduce_sum(crgrad,axis=0)
                         while crgrad.ndim < input_node.ndim:
                             crgrad=expand_dims(crgrad,axis=0)
-                        for axis, size in enumerate(crgrad.shape):
+                        for axis, size in enumerate(input_node.shape):
                             if size==1:
                                 crgrad=reduce_sum(crgrad,axis=axis,keep_dims=1)
                         crgrad=tile(crgrad,reps=np.array(input_node.shape)//crgrad.shape)
