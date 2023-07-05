@@ -63,7 +63,7 @@ def _reduce_sum_gradient(op,grad):
     A=op.input_nodes[0]
     output_shape=np.array(A.shape)
     output_shape[op.axis]=1
-    grad=np.reshape(grad,output_shape)
+    grad=reshape(grad,newshape=output_shape)
     return [grad]
 
 @RegGrad('Expandim')
@@ -94,6 +94,9 @@ def _minimum_gradient(op,grad):
     A,B=op.input_nodes
     where_a_lt_b=A<B
     return grad*where_a_lt_b.value,grad*~where_a_lt_b.value
+@RegGrad('Reshape')
+def _reshape_gradient(op,grad):
+    return [reshape(grad,newshape=op.input_nodes[0].shape)]
 
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}

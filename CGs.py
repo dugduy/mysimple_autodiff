@@ -103,7 +103,12 @@ class Minimum(Operation):
         super().__init__([A,B], name)
     def compute(self,A_val,B_val):
         return np.minimum(A_val,B_val)
-
+class Reshape(Operation):
+    def __init__(self, A,new_shape, name='') -> None:
+        super().__init__([A], name)
+        self.newshape=new_shape
+    def compute(self,A_val):
+        return np.reshape(A_val,self.newshape)
 
 def cgsfunc(func):
     def wrapper(*args,**kvagrs):
@@ -271,6 +276,10 @@ def maximum(A,B,name=''):
 def minimum(A,B,name=''):
     minimum_obj=Minimum(A,B,name+'_ops')
     return Variable(minimum_obj.compute(A.value,B.value),name,minimum_obj)
+@cgsfunc
+def reshape(A,newshape,name=''):
+    reshaper=Reshape(A,newshape,name+'_ops')
+    return Variable(reshaper.compute(A.value),name,reshaper)
 
 def traverse_postorder(var_obj):
     nodes_postorder=[]
