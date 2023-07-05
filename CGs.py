@@ -6,6 +6,13 @@ class Operation:
         self.name=name
     def compute(self):
         pass
+
+class InitOp(Operation):
+    def __init__(self, name='') -> None:
+        self.name=name
+    def compute(self,val):
+        return val
+
 class Neg(Operation):
     def __init__(self, a, name='') -> None:
         super().__init__([a], name)
@@ -85,11 +92,37 @@ class Transpose(Operation):
     def compute(self,A_val):
         return np.transpose(A_val,self.new_dim_index)
 
+class Maximum(Operation):
+    def __init__(self, A,B, name='') -> None:
+        super().__init__([A,B], name)
+    def compute(self,A_val,B_val):
+        return np.maximum(A_val,B_val)
+
+class Minimum(Operation):
+    def __init__(self, A,B, name='') -> None:
+        super().__init__([A,B], name)
+    def compute(self,A_val,B_val):
+        return np.minimum(A_val,B_val)
+
+
+def cgsfunc(func):
+    def wrapper(*args,**kvagrs):
+        input_nodes=[]
+        for arg in args:
+            if not type(arg)==Variable:
+                input_nodes.append(Variable(arg))
+            else:
+                input_nodes.append(arg)
+        return func(*input_nodes,**kvagrs)
+    return wrapper
+
 class Variable:
     def __init__(self,init_val, name='',ops=None) -> None:
         self.name=name
         self.value=np.array(init_val)
         self.ops=ops
+        if ops is None:
+            self.ops=InitOp('init_ops')
     def __getattr__(self, __name: str) -> Any:
         if __name=='shape':
             return self.value.shape
@@ -139,19 +172,36 @@ class Variable:
         return neg(self)
     # def __str__(self) -> str:
     #     return str(self.value)
+    @cgsfunc
+    def __lt__(self,other):
+        return Variable(self.value<other.value)
+    @cgsfunc
+    def __gt__(self,other):
+        return Variable(self.value>other.value)
+    @cgsfunc
+    def __eq__(self,other):
+        return Variable(self.value==other.value)
+    @cgsfunc
+    def __le__(self,other):
+        return Variable(self.value<=other.value)
+    @cgsfunc
+    def __ge__(self,other):
+        return Variable(self.value>=other.value)
+    @cgsfunc
+    def __ne__(self,other):
+        return Variable(self.value!=other.value)
+    @cgsfunc
+    def __mod__(self,other):
+        return Variable(self.value%other.value)
+    def __hash__(self):
+        return hash((self.name,self.ops))
+    def __getitem__(self,name):
+        if type(name)==Variable:
+            name=tuple(name.value.tolist())
+        return Variable(self.value.__getitem__(name))
     def __repr__(self) -> str:
         return f'Variable({self.value},name="{self.name}")'
 
-def cgsfunc(func):
-    def wrapper(*args,**kvagrs):
-        input_nodes=[]
-        for arg in args:
-            if not type(arg)==Variable:
-                input_nodes.append(Variable(arg))
-            else:
-                input_nodes.append(arg)
-        return func(*input_nodes,**kvagrs)
-    return wrapper
 
 @cgsfunc
 def reduce_sum(A,axis=None,keep_dims=False,name=''):
@@ -209,6 +259,18 @@ def cast(A,dtype='float',name=''):
 def transpose(A,new_dim_index,name=''):
     T_obj=Transpose(A,new_dim_index,name+'_ops')
     return Variable(T_obj.compute(A.value),name,T_obj)
+@cgsfunc
+def constant(A,name=''):
+    init_obj=InitOp(name+'_ops')
+    return Variable(init_obj.compute(A),name,init_obj)
+@cgsfunc
+def maximum(A,B,name=''):
+    maximum_obj=Maximum(A,B,name+'_ops')
+    return Variable(maximum_obj.compute(A.value,B.value),name,maximum_obj)
+@cgsfunc
+def minimum(A,B,name=''):
+    minimum_obj=Minimum(A,B,name+'_ops')
+    return Variable(minimum_obj.compute(A.value,B.value),name,minimum_obj)
 
 def traverse_postorder(var_obj):
     nodes_postorder=[]

@@ -15,7 +15,7 @@ class RegGrad:
                             crgrad=expand_dims(crgrad,axis=0)
                         for axis, size in enumerate(crgrad.shape):
                             if size==1:
-                                crgrad=reduce_sum(crgrad,axis=axis,keepdims=1)
+                                crgrad=reduce_sum(crgrad,axis=axis,keep_dims=1)
                         crgrad=tile(crgrad,reps=np.array(input_node.shape)//crgrad.shape)
                 final_grad.append(crgrad)
             return final_grad
@@ -84,6 +84,16 @@ def _transpose_gradient(op,grad):
     for i, dim in enumerate(op.new_dim_index):
         reT[dim]=i
     return [transpose(grad,new_dim_index=reT)]
+@RegGrad('Maximum')
+def _maximum_gradient(op,grad):
+    A,B=op.input_nodes
+    where_a_gt_b=A>B
+    return grad*where_a_gt_b.value,grad*~where_a_gt_b.value
+@RegGrad('Minimum')
+def _minimum_gradient(op,grad):
+    A,B=op.input_nodes
+    where_a_lt_b=A<B
+    return grad*where_a_lt_b.value,grad*~where_a_lt_b.value
 
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}
