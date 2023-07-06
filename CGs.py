@@ -165,6 +165,8 @@ class Variable:
         return self*other
     def __matmul__(self,other):
         return matmul(self,other)
+    def __rmatmul__(self,other):
+        return matmul(other,self)
     def __truediv__(self,other):
         return div(self,other)
     def __rtruediv__(self,other):
