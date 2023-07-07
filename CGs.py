@@ -282,6 +282,9 @@ def minimum(A,B,name=''):
 def reshape(A,newshape,name=''):
     reshaper=Reshape(A,newshape,name+'_ops')
     return Variable(reshaper.compute(A.value),name,reshaper)
+@cgsfunc
+def clip(A,min,max,name=''):
+    return maximum(minimum(max,A),min)
 
 def traverse_postorder(var_obj):
     nodes_postorder=[]
