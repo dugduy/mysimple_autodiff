@@ -4,10 +4,10 @@ class RegGrad:
     def __init__(self,op_type) -> None:
         self._optype=eval(op_type)
     def __call__(self,f):
-        def wrapper(op,grad):
-            raw_grad=f(op,grad)
+        def wrapper(node,grad):
+            raw_grad=f(node,grad)
             final_grad=[]
-            for input_node,crgrad in zip(op.input_nodes,raw_grad):
+            for input_node,crgrad in zip(node.ops.input_nodes,raw_grad):
                 if crgrad.shape!=input_node.shape:                        
                         while crgrad.ndim > input_node.ndim:
                             crgrad=reduce_sum(crgrad,axis=0)
@@ -23,80 +23,80 @@ class RegGrad:
         return wrapper
 
 @RegGrad('Neg')
-def _neg_gradient(op,grad):
+def _neg_gradient(node,grad):
     return [-grad]
 
 @RegGrad('Add')
-def _add_gradient(op,grad):
+def _add_gradient(node,grad):
     return grad,grad
 
 @RegGrad('Sub')
-def _sub_gradient(op,grad):
+def _sub_gradient(node,grad):
     return grad,-grad
 
 @RegGrad('Mul')
-def _mul_gradient(op,grad):
-    a,b=op.input_nodes[0],op.input_nodes[1]
+def _mul_gradient(node,grad):
+    a,b=node.ops.input_nodes
     return grad*b,grad*a
 
 @RegGrad('Matmul')
-def _matmul_gradient(op,grad):
-    A,B=op.input_nodes[0],op.input_nodes[1]
+def _matmul_gradient(node,grad):
+    A,B=node.ops.input_nodes
     return grad@B.T,A.T@grad
 
 @RegGrad('Div')
-def _div_gradient(op,grad):
-    a,b=op.input_nodes[0],op.input_nodes[1]
+def _div_gradient(node,grad):
+    a,b=node.ops.input_nodes
     return grad/b,-grad*a/b**2
 
 @RegGrad('Pow')
-def _pow_gradient(op,grad):
-    a,b=op.input_nodes[0],op.input_nodes[1]
-    return grad*b*a**(b-1),grad*log(a)*a**b
+def _pow_gradient(node,grad):
+    a,b=node.ops.input_nodes
+    return grad*b*a**(b-1),grad*log(a)*node
 
 @RegGrad('Log')
-def _log_gradient(op,grad):
-    return [grad/op.input_nodes[0]]
+def _log_gradient(node,grad):
+    return [grad/node.ops.input_nodes[0]]
 
 @RegGrad('Reduce_sum')
-def _reduce_sum_gradient(op,grad):
-    A=op.input_nodes[0]
+def _reduce_sum_gradient(node,grad):
+    A=node.ops.input_nodes[0]
     output_shape=np.array(A.shape)
-    output_shape[op.axis]=1
+    output_shape[node.ops.axis]=1
     grad=reshape(grad,newshape=output_shape)
     return [grad]
 
 @RegGrad('Expandim')
-def _expandim_gradient(op,grad):
-    A=op.input_nodes[0]
+def _expandim_gradient(node,grad):
+    A=node.ops.input_nodes[0]
     return [grad.reshape(A.shape)]
 
 @RegGrad('Tile')
-def _tile_gradient(op,grad):
-    A=op.input_nodes[0]
-    return [grad.reshape(op.reps+A.shape)]
+def _tile_gradient(node,grad):
+    A=node.ops.input_nodes[0]
+    return [grad.reshape(node.ops.reps+A.shape)]
 @RegGrad('Cast')
-def _cast_gradient(op,grad):
-    return [cast(grad,dtype=op.dtype)]
+def _cast_gradient(node,grad):
+    return [cast(grad,dtype=node.ops.dtype)]
 @RegGrad('Transpose')
-def _transpose_gradient(op,grad):
-    reT=np.zeros(len(op.new_dim_index),'int')
-    for i, dim in enumerate(op.new_dim_index):
+def _transpose_gradient(node,grad):
+    reT=np.zeros(len(node.ops.new_dim_index),'int')
+    for i, dim in enumerate(node.ops.new_dim_index):
         reT[dim]=i
     return [transpose(grad,new_dim_index=reT)]
 @RegGrad('Maximum')
-def _maximum_gradient(op,grad):
-    A,B=op.input_nodes
+def _maximum_gradient(node,grad):
+    A,B=node.ops.input_nodes
     where_a_gt_b=A>B
     return grad*where_a_gt_b.value,grad*~where_a_gt_b.value
 @RegGrad('Minimum')
-def _minimum_gradient(op,grad):
-    A,B=op.input_nodes
+def _minimum_gradient(node,grad):
+    A,B=node.ops.input_nodes
     where_a_lt_b=A<B
     return grad*where_a_lt_b.value,grad*~where_a_lt_b.value
 @RegGrad('Reshape')
-def _reshape_gradient(op,grad):
-    return [reshape(grad,newshape=op.input_nodes[0].shape)]
+def _reshape_gradient(node,grad):
+    return [reshape(grad,newshape=node.ops.input_nodes[0].shape)]
 
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}
@@ -107,7 +107,7 @@ def gradients(target_var):
 
     for node in steps:
         grad_fn=_gradient_registry[node.ops.__class__]
-        grads=grad_fn(node.ops,grad_dict[node])
+        grads=grad_fn(node,grad_dict[node])
         for input_node,grad in zip(node.ops.input_nodes,grads):
             grad_dict[input_node]=grad_dict.get(input_node,0)+grad
     return grad_dict
