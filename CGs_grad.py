@@ -69,12 +69,12 @@ def _reduce_sum_gradient(node,grad):
 @RegGrad('Expandim')
 def _expandim_gradient(node,grad):
     A=node.ops.input_nodes[0]
-    return [grad.reshape(A.shape)]
+    return [reshape(grad,newshape=A.shape)]
 
 @RegGrad('Tile')
 def _tile_gradient(node,grad):
     A=node.ops.input_nodes[0]
-    return [reshape(grad,newshape=node.ops.reps+A.shape)]
+    return [reshape(grad,newshape=tuple(node.ops.reps)+tuple(A.shape))]
 @RegGrad('Cast')
 def _cast_gradient(node,grad):
     return [cast(grad,dtype=node.ops.dtype)]
@@ -99,7 +99,7 @@ def _reshape_gradient(node,grad):
     return [reshape(grad,newshape=node.ops.input_nodes[0].shape)]
 @RegGrad('Zeros_padding')
 def _zeros_pad_gradient(node,grad):
-    return grad[node.ops.container]
+    return grad.__getitem__(node.ops.container)
 @RegGrad('GetItem')
 def _getitem_gradient(node,grad):
     return [zeros_pad(grad,zeros_shape=node.ops.input_nodes[0].shape,container=node.ops.items)]
