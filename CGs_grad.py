@@ -8,7 +8,7 @@ class RegGrad:
             raw_grad=f(node,grad)
             final_grad=[]
             for input_node,crgrad in zip(node.ops.input_nodes,raw_grad):
-                if crgrad.shape!=input_node.shape:                        
+                if crgrad.shape!=input_node.shape: 
                         while crgrad.ndim > input_node.ndim:
                             crgrad=reduce_sum(crgrad,axis=0)
                         while crgrad.ndim < input_node.ndim:
@@ -74,7 +74,7 @@ def _expandim_gradient(node,grad):
 @RegGrad('Tile')
 def _tile_gradient(node,grad):
     A=node.ops.input_nodes[0]
-    return [grad.reshape(node.ops.reps+A.shape)]
+    return [reshape(grad,newshape=node.ops.reps+A.shape)]
 @RegGrad('Cast')
 def _cast_gradient(node,grad):
     return [cast(grad,dtype=node.ops.dtype)]
@@ -97,6 +97,13 @@ def _minimum_gradient(node,grad):
 @RegGrad('Reshape')
 def _reshape_gradient(node,grad):
     return [reshape(grad,newshape=node.ops.input_nodes[0].shape)]
+@RegGrad('Zeros_padding')
+def _zeros_pad_gradient(node,grad):
+    return grad[node.ops.container]
+@RegGrad('GetItem')
+def _getitem_gradient(node,grad):
+    return [zeros_pad(grad,zeros_shape=node.ops.input_nodes[0].shape,container=node.ops.items)]
+
 
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}

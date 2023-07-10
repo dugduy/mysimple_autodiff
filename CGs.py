@@ -110,6 +110,23 @@ class Reshape(Operation):
     def compute(self,A_val):
         return np.reshape(A_val,self.newshape)
 
+class Zeros_padding(Operation):
+    def __init__(self, A,zeros_shape,container, name='') -> None:
+        super().__init__([A], name)
+        self.zeros_shape=zeros_shape
+        self.container=container
+    def compute(self,A_val):
+        zeros=np.zeros(self.zeros_shape)
+        zeros[self.container]=A_val
+        return zeros
+
+class GetItem(Operation):
+    def __init__(self, A,items, name='') -> None:
+        super().__init__([A], name)
+        self.items=items
+    def compute(self,A_val):
+        return A_val.__getitem__(self.items)
+
 def cgsfunc(func):
     def wrapper(*args,**kvagrs):
         input_nodes=[]
@@ -203,9 +220,7 @@ class Variable:
     def __hash__(self):
         return hash((self.name,self.ops))
     def __getitem__(self,name):
-        if type(name)==Variable:
-            name=tuple(name.value.tolist())
-        return Variable(self.value.__getitem__(name))
+        return getitem(self,items=name)
     def __repr__(self) -> str:
         return f'Variable({self.value},name="{self.name}")'
 
@@ -284,7 +299,15 @@ def reshape(A,newshape,name=''):
     return Variable(reshaper.compute(A.value),name,reshaper)
 @cgsfunc
 def clip(A,min,max,name=''):
-    return maximum(minimum(max,A),min)
+    return maximum(minimum(max,A),min,name)
+@cgsfunc
+def zeros_pad(A,zeros_shape,container,name=''):
+    padder=Zeros_padding(A,zeros_shape,container,name+'_ops')
+    return Variable(padder.compute(A.value),name,padder)
+@cgsfunc
+def getitem(A,items,name=''):
+    getter=GetItem(A,items,name+'_ops')
+    return Variable(getter.compute(A.value),name,getter)
 
 def traverse_postorder(var_obj):
     nodes_postorder=[]
