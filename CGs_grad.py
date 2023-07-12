@@ -103,7 +103,13 @@ def _zeros_pad_gradient(node,grad):
 @RegGrad('GetItem')
 def _getitem_gradient(node,grad):
     return [zeros_pad(grad,zeros_shape=node.ops.input_nodes[0].shape,container=node.ops.items)]
-
+@RegGrad('AdjustNeg')
+def _adneg_gradient(node,grad):
+    return [adjustneg(grad,items=node.ops.items)]
+@RegGrad('Abs')
+def _abs_gradient(node,grad):
+    where_lt_0=node.ops.input_nodes[0]<0
+    return [adjustneg(grad,items=where_lt_0.value)]
 
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}

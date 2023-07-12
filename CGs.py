@@ -127,6 +127,21 @@ class GetItem(Operation):
     def compute(self,A_val):
         return A_val.__getitem__(self.items)
 
+class AdjustNeg(Operation):
+    def __init__(self, A,items, name='') -> None:
+        super().__init__([A], name)
+        self.items=items
+    def compute(self,A_val):
+        a=A_val.copy()
+        a.__setitem__(self.items,-a.__getitem__(self.items))
+        return a
+
+class Abs(Operation):
+    def __init__(self, A, name='') -> None:
+        super().__init__([A], name)
+    def compute(self,A_val):
+        return np.abs(A_val)
+
 def cgsfunc(func):
     def wrapper(*args,**kvagrs):
         input_nodes=[]
@@ -308,6 +323,14 @@ def zeros_pad(A,zeros_shape,container,name=''):
 def getitem(A,items,name=''):
     getter=GetItem(A,items,name+'_ops')
     return Variable(getter.compute(A.value),name,getter)
+@cgsfunc
+def absolute(A,name=''):
+    abs_obj=Abs(A,name+'_ops')
+    return Variable(abs_obj.compute(A.value),name,abs_obj)
+@cgsfunc
+def adjustneg(A,items,name=''):
+    adjusting=AdjustNeg(A,items,name+'_ops')
+    return Variable(adjusting.compute(A.value),name,adjusting)
 
 def traverse_postorder(var_obj):
     nodes_postorder=[]
