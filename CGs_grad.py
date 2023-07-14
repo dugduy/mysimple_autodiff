@@ -110,7 +110,12 @@ def _adneg_gradient(node,grad):
 def _abs_gradient(node,grad):
     where_lt_0=node.ops.input_nodes[0]<0
     return [adjustneg(grad,items=where_lt_0.value)]
-
+@RegGrad('Sin')
+def _sin_gradient(node,grad):
+    return [cos(node.ops.input_nodes[0])*grad]
+@RegGrad('Cos')
+def _cos_gradient(node,grad):
+    return [-sin(node.ops.input_nodes[0])*grad]
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}
     steps=traverse_postorder(target_var)

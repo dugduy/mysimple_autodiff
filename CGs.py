@@ -142,6 +142,16 @@ class Abs(Operation):
     def compute(self,A_val):
         return np.abs(A_val)
 
+class Sin(Operation):
+    def __init__(self,A, name='') -> None:
+        super().__init__([A], name)
+    def compute(self,A_val):
+        return np.sin(A_val)
+
+class Cos(Sin):
+    def compute(self, A_val):
+        return np.cos(A_val)
+
 def cgsfunc(func):
     def wrapper(*args,**kvagrs):
         input_nodes=[]
@@ -331,7 +341,14 @@ def absolute(A,name=''):
 def adjustneg(A,items,name=''):
     adjusting=AdjustNeg(A,items,name+'_ops')
     return Variable(adjusting.compute(A.value),name,adjusting)
-
+@cgsfunc
+def sin(A,name=''):
+    siner=Sin(A,name+'_ops')
+    return Variable(siner.compute(A.value),name,siner)
+@cgsfunc
+def cos(A,name=''):
+    coster=Cos(A,name+'_ops')
+    return Variable(coster.compute(A.value),name,coster)
 def traverse_postorder(var_obj):
     nodes_postorder=[]
     def recurse(node):
