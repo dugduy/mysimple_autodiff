@@ -141,6 +141,10 @@ class Abs(Operation):
         super().__init__([A], name)
     def compute(self,A_val):
         return np.abs(A_val)
+    
+class Mean(Reduce_sum):
+    def compute(self, A_val):
+        return np.mean(A_val,self.axis,keepdims=self.keep_dims)
 
 class Sin(Operation):
     def __init__(self,A, name='') -> None:
@@ -175,6 +179,8 @@ class Variable:
             return self.value.shape
         elif __name=='ndim':
             return self.value.ndim
+        elif __name=='size':
+            return self.value.size
         elif __name=='T':
             dims=list(range(self.ndim))
             dims[-2],dims[-1]=dims[-1],dims[-2]
@@ -349,6 +355,10 @@ def sin(A,name=''):
 def cos(A,name=''):
     coster=Cos(A,name+'_ops')
     return Variable(coster.compute(A.value),name,coster)
+@cgsfunc
+def mean(A,axis=None,keep_dims=False,name=''):
+    mean_obj=Mean(A,axis,keep_dims,name+'_ops')
+    return Variable(mean_obj.compute(A.value),name,mean_obj)
 def traverse_postorder(var_obj):
     nodes_postorder=[]
     def recurse(node):

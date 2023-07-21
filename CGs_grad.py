@@ -66,6 +66,19 @@ def _reduce_sum_gradient(node,grad):
     grad=reshape(grad,newshape=output_shape)
     return [grad]
 
+@RegGrad('Mean')
+def _reduce_sum_gradient(node,grad):
+    A=node.ops.input_nodes[0]
+    output_shape=np.array(A.shape)
+    output_shape[node.ops.axis]=1
+    grad=reshape(grad,newshape=output_shape)
+    if node.ops.axis is None:
+        devide_for=node.ops.input_nodes[0].size
+    else:
+        devide_for=np.array(A.shape)[node.ops.axis]
+    print(devide_for)
+    return [grad/devide_for]
+
 @RegGrad('Expandim')
 def _expandim_gradient(node,grad):
     A=node.ops.input_nodes[0]
