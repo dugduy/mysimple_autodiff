@@ -76,7 +76,6 @@ def _reduce_sum_gradient(node,grad):
         devide_for=node.ops.input_nodes[0].size
     else:
         devide_for=np.array(A.shape)[node.ops.axis]
-    print(devide_for)
     return [grad/devide_for]
 
 @RegGrad('Expandim')

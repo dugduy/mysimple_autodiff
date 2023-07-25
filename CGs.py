@@ -125,6 +125,8 @@ class GetItem(Operation):
         super().__init__([A], name)
         self.items=items
     def compute(self,A_val):
+        if type(self.items)==Variable:
+            self.items=self.items.value
         return A_val.__getitem__(self.items)
 
 class AdjustNeg(Operation):
