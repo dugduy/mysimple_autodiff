@@ -132,7 +132,9 @@ def _cos_gradient(node,grad):
 def _max_gradient(node,grad):
     A=node.ops.input_nodes[0]
     where_eq_max=(A==reduce_max(A,axis=node.ops.axis,keep_dims=True)).astype('float32')
-    return [expand_dims(grad,axis=node.ops.axis)*where_eq_max/reduce_sum(where_eq_max,axis=node.ops.axis,keep_dims=True)]
+    output_shape=np.array(A.shape)
+    output_shape[node.ops.axis]=1
+    return [reshape(grad,newshape=output_shape)*where_eq_max/reduce_sum(where_eq_max,axis=node.ops.axis,keep_dims=True)]
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}
     steps=traverse_postorder(target_var)

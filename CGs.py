@@ -191,6 +191,8 @@ class Variable:
             return self.value.ndim
         elif __name=='size':
             return self.value.size
+        elif __name=='dtype':
+            return self.value.dtype
         elif __name=='T':
             dims=list(range(self.ndim))
             dims[-2],dims[-1]=dims[-1],dims[-2]
@@ -263,7 +265,7 @@ class Variable:
     def __getitem__(self,name):
         return getitem(self,items=name)
     def __repr__(self) -> str:
-        return f'Variable({self.value},name="{self.name}")'
+        return f'Variable({self.value}, shape={self.shape}, dtype={self.dtype}, name="{self.name}")'
 
 
 @cgsfunc
@@ -377,6 +379,10 @@ def reduce_max(A,axis=None,keep_dims=False,name=''):
 def reduce_min(A,axis=None,keep_dims=False,name=''):
     return -reduce_max(-A,axis=axis,keep_dims=keep_dims,name=name)
 
+
+@cgsfunc
+def exp(x,name=''):
+    return np.e**x
 @cgsfunc
 def argmax(A,axis=None,keep_dims=False,name=''):
     return Variable(np.argmax(A.value,axis,keepdims=keep_dims),name)
