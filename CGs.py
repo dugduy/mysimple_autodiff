@@ -144,7 +144,7 @@ class Abs(Operation):
     def compute(self,A_val):
         return np.abs(A_val)
     
-class Mean(Reduce_sum):
+class Reduce_Mean(Reduce_sum):
     def compute(self, A_val):
         return np.mean(A_val,self.axis,keepdims=self.keep_dims)
 
@@ -157,6 +157,14 @@ class Sin(Operation):
 class Cos(Sin):
     def compute(self, A_val):
         return np.cos(A_val)
+    
+class Reduce_Max(Operation):
+    def __init__(self, A,axis=None, keep_dims=False, name='') -> None:
+        super().__init__([A], name)
+        self.axis=axis
+        self.keep_dims=keep_dims
+    def compute(self,A_val):
+        return np.max(A_val,self.axis,keepdims=self.keep_dims)
 
 def cgsfunc(func):
     def wrapper(*args,**kvagrs):
@@ -358,9 +366,24 @@ def cos(A,name=''):
     coster=Cos(A,name+'_ops')
     return Variable(coster.compute(A.value),name,coster)
 @cgsfunc
-def mean(A,axis=None,keep_dims=False,name=''):
-    mean_obj=Mean(A,axis,keep_dims,name+'_ops')
+def reduce_mean(A,axis=None,keep_dims=False,name=''):
+    mean_obj=Reduce_Mean(A,axis,keep_dims,name+'_ops')
     return Variable(mean_obj.compute(A.value),name,mean_obj)
+@cgsfunc
+def reduce_max(A,axis=None,keep_dims=False,name=''):
+    maxer=Reduce_Max(A,axis,keep_dims,name+'_ops')
+    return Variable(maxer.compute(A.value),name,maxer)
+@cgsfunc
+def reduce_min(A,axis=None,keep_dims=False,name=''):
+    return -reduce_max(-A,axis=axis,keep_dims=keep_dims,name=name)
+
+@cgsfunc
+def argmax(A,axis=None,keep_dims=False,name=''):
+    return Variable(np.argmax(A.value,axis,keepdims=keep_dims),name)
+@cgsfunc
+def argmin(A,axis=None,keep_dims=False,name=''):
+    return Variable(np.argmin(A.value,axis,keepdims=keep_dims),name)
+
 def traverse_postorder(var_obj):
     nodes_postorder=[]
     def recurse(node):
