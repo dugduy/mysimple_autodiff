@@ -166,6 +166,25 @@ class Reduce_Max(Operation):
     def compute(self,A_val):
         return np.max(A_val,self.axis,keepdims=self.keep_dims)
 
+class Unfold(Operation):
+    def __init__(self, A,axis,size,step, name='') -> None:
+        super().__init__([A], name)
+        self.axis=axis
+        self.kernel_size=size
+        self.step=step
+    def compute(self,A_val):
+        output_shape=np.array(A_val.shape+(self.kernel_size,))
+        output_shape[self.axis]=(output_shape[self.axis]-self.kernel_size)//self.step+1
+        transposing=np.arange(len(output_shape))
+        transposing[self.axis],transposing[0]=transposing[0],transposing[self.axis]
+
+        final_output=np.zeros(output_shape).transpose(transposing)
+        x=A_val.transpose(transposing[:-1])
+        transpose_x=tuple(range(1,x.ndim))+(0,)
+        for i in range(final_output.shape[0]):
+            final_output[i]=x[i*self.step:i*self.step+self.kernel_size].transpose(transpose_x)
+        return final_output.transpose(transposing)
+
 def cgsfunc(func):
     def wrapper(*args,**kvagrs):
         input_nodes=[]
@@ -378,7 +397,10 @@ def reduce_max(A,axis=None,keep_dims=False,name=''):
 @cgsfunc
 def reduce_min(A,axis=None,keep_dims=False,name=''):
     return -reduce_max(-A,axis=axis,keep_dims=keep_dims,name=name)
-
+@cgsfunc
+def unfold(A,axis,kernel_size,step,name=''):
+    unfolding=Unfold(A,axis,kernel_size,step,name+'_ops')
+    return Variable(unfolding.compute(A.value),name,unfolding)
 
 @cgsfunc
 def exp(x,name=''):

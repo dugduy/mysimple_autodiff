@@ -111,7 +111,7 @@ def _reshape_gradient(node,grad):
     return [reshape(grad,newshape=node.ops.input_nodes[0].shape)]
 @RegGrad('Zeros_padding')
 def _zeros_pad_gradient(node,grad):
-    return grad.__getitem__(node.ops.container)
+    return [grad.__getitem__(node.ops.container)]
 @RegGrad('GetItem')
 def _getitem_gradient(node,grad):
     return [zeros_pad(grad,zeros_shape=node.ops.input_nodes[0].shape,container=node.ops.items)]
@@ -135,6 +135,18 @@ def _max_gradient(node,grad):
     output_shape=np.array(A.shape)
     output_shape[node.ops.axis]=1
     return [reshape(grad,newshape=output_shape)*where_eq_max/reduce_sum(where_eq_max,axis=node.ops.axis,keep_dims=True)]
+@RegGrad('Unfold')
+def _unfold_gradient(node,grad):
+    A=node.ops.input_nodes[0]
+    transposing=np.arange(grad.ndim)
+    transposing[0],transposing[node.ops.axis]=transposing[node.ops.axis],transposing[0]
+    final=transpose(Variable(np.zeros_like(A.value)),new_dim_index=transposing[:-1])
+    grad=transpose(grad,new_dim_index=transposing)
+    transpose_x=(-1,)+np.arange(A.ndim)
+    for i in range(grad.shape[0]):
+        final+=zeros_pad(transpose(grad[i],new_dim_index=transpose_x),zeros_shape=final.shape,container=slice(i*node.ops.step,i*node.ops.step+node.ops.kernel_size))
+    return [transpose(final,new_dim_index=transposing[:-1])]
+
 def gradients(target_var):
     grad_dict={target_var:Variable(np.ones_like(target_var.value))}
     steps=traverse_postorder(target_var)
