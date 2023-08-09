@@ -76,7 +76,7 @@ def _reduce_sum_gradient(node,grad):
     if type(node.ops.axis)==tuple:
         output_shape[list(node.ops.axis)]=1
         devide_for=np.prod(np.array(A.shape)[list(node.ops.axis)])
-    if node.ops.axis is None:
+    elif node.ops.axis is None:
         output_shape[node.ops.axis]=1
         devide_for=A.size
     else:
