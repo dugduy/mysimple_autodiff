@@ -361,7 +361,7 @@ def reshape(A,newshape,name=''):
     return Variable(reshaper.compute(A.value),name,reshaper)
 @cgsfunc
 def clip(A,min,max,name=''):
-    return maximum(minimum(max,A),min,name)
+    return maximum(minimum(max,A),min,name=name)
 @cgsfunc
 def zeros_pad(A,zeros_shape,container,name=''):
     padder=Zeros_padding(A,zeros_shape,container,name+'_ops')

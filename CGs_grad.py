@@ -62,7 +62,10 @@ def _log_gradient(node,grad):
 def _reduce_sum_gradient(node,grad):
     A=node.ops.input_nodes[0]
     output_shape=np.array(A.shape)
-    output_shape[list(node.ops.axis)]=1
+    if type(node.ops.axis)==tuple:
+        output_shape[list(node.ops.axis)]=1
+    else:
+        output_shape[node.ops.axis]=1
     grad=reshape(grad,newshape=output_shape)
     return [grad]
 
@@ -70,12 +73,16 @@ def _reduce_sum_gradient(node,grad):
 def _reduce_sum_gradient(node,grad):
     A=node.ops.input_nodes[0]
     output_shape=np.array(A.shape)
-    output_shape[list(node.ops.axis)]=1
-    grad=reshape(grad,newshape=output_shape)
-    if node.ops.axis is None:
-        devide_for=node.ops.input_nodes[0].size
-    else:
+    if type(node.ops.axis)==tuple:
+        output_shape[list(node.ops.axis)]=1
         devide_for=np.prod(np.array(A.shape)[list(node.ops.axis)])
+    if node.ops.axis is None:
+        output_shape[node.ops.axis]=1
+        devide_for=A.size
+    else:
+        output_shape[node.ops.axis]=1
+        devide_for=A.shape[node.ops.axis]
+    grad=reshape(grad,newshape=output_shape)
     return [grad/devide_for]
 
 @RegGrad('Expandim')
@@ -133,7 +140,10 @@ def _max_gradient(node,grad):
     A=node.ops.input_nodes[0]
     where_eq_max=(A==reduce_max(A,axis=node.ops.axis,keep_dims=True)).astype('float32')
     output_shape=np.array(A.shape)
-    output_shape[node.ops.axis]=1
+    if type(node.ops.axis)==tuple:
+        output_shape[list(node.ops.axis)]=1
+    else:
+        output_shape[node.ops.axis]=1
     return [reshape(grad,newshape=output_shape)*where_eq_max/reduce_sum(where_eq_max,axis=node.ops.axis,keep_dims=True)]
 @RegGrad('Unfold')
 def _unfold_gradient(node,grad):
