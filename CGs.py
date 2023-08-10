@@ -343,7 +343,6 @@ def cast(A,dtype='float',name=''):
 def transpose(A,new_dim_index,name=''):
     T_obj=Transpose(A,new_dim_index,name+'_ops')
     return Variable(T_obj.compute(A.value),name,T_obj)
-@cgsfunc
 def constant(A,name=''):
     init_obj=InitOp(name+'_ops')
     return Variable(init_obj.compute(A),name,init_obj)
