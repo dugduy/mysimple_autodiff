@@ -1,48 +1,64 @@
-from typing import Any
-import numpy as np 
+import numpy as np
+
+def traverse_postorder(var_obj):
+    nodes_postorder=[]
+    def recurse(node):
+        if hasattr(node.ops,'input_nodes'):
+            for input_node in node.ops.input_nodes:
+                recurse(input_node)
+        nodes_postorder.append(node)
+    recurse(var_obj)
+    return nodes_postorder
+
 class Operation:
     def __init__(self,input_nodes=[], name='') -> None:
-        self.input_nodes=input_nodes
+        self.input_nodes=[]
+        for input_node in input_nodes:
+            if type(input_node)!=Variable:
+                self.input_nodes.append(Variable(input_node))
+            else:
+                self.input_nodes.append(input_node)
         self.name=name
-    def compute(self):
+    def calculate(self):
         pass
+    def compute(self):
+        inputs=[node.value for node in self.input_nodes]
+        return self.calculate(*inputs)
 
 class InitOp(Operation):
     def __init__(self, name='') -> None:
         self.name=name
-    def compute(self,val):
-        return val
 
 class Neg(Operation):
     def __init__(self, a, name='') -> None:
         super().__init__([a], name)
-    def compute(self,a_val):
+    def calculate(self,a_val):
         return -a_val
 
 class Add(Operation):
     def __init__(self, a,b, name='') -> None:
         super().__init__([a,b], name)
-    def compute(self, x_val, y_val):
+    def calculate(self, x_val, y_val):
         return x_val+y_val
 
 class Sub(Add):
-    def compute(self, x_val, y_val):
+    def calculate(self, x_val, y_val):
         return x_val-y_val
 
 class Mul(Add):
-    def compute(self, x_val, y_val):
+    def calculate(self, x_val, y_val):
         return x_val*y_val
     
 class Matmul(Add):
-    def compute(self, x_val, y_val):
+    def calculate(self, x_val, y_val):
         return x_val@y_val
 
 class Div(Add):
-    def compute(self, x_val, y_val):
+    def calculate(self, x_val, y_val):
         return x_val/y_val
 
 class Pow(Add):
-    def compute(self, x_val, y_val):
+    def calculate(self, x_val, y_val):
         return x_val**y_val
     
 class Reduce_sum(Operation):
@@ -50,64 +66,57 @@ class Reduce_sum(Operation):
         super().__init__([A], name)
         self.axis=axis
         self.keep_dims=keep_dims
-    def compute(self,A_val):
+    def calculate(self,A_val):
         return np.sum(A_val,self.axis,keepdims=self.keep_dims)
     
 class Log(Neg):
-    def compute(self, x_val):
+    def calculate(self, x_val):
         return np.log(x_val)
 
 class Expandim(Operation):
     def __init__(self, A,axis, name='') -> None:
         super().__init__([A], name)
         self.axis=axis
-    def compute(self,A_val):
+    def calculate(self,A_val):
         return np.expand_dims(A_val,self.axis)
 
 class Tile(Operation):
     def __init__(self, A,reps, name='') -> None:
         super().__init__([A],name)
         self.reps=reps
-    def compute(self,A_val):
+    def calculate(self,A_val):
         return np.tile(A_val,self.reps)
 
-class Cast(Operation):
-    def __init__(self, A,dtype='float32', name='') -> None:
-        super().__init__([A], name)
-        self.dtype=dtype
-    def compute(self,A_val):
-        return A_val.astype(self.dtype)
-
-class Concate(Operation):
-    def __init__(self, input_arrs,axis, name='') -> None:
-        super().__init__(input_arrs, name)
-        self.axis=axis
-    def compute(self,input_values):
-        return np.concatenate(input_values,self.axis)
+# class Concate(Operation):
+#     def __init__(self, input_arrs,axis, name='') -> None:
+#         super().__init__(input_arrs, name)
+#         self.axis=axis
+#     def calculate(self,input_values):
+#         return np.concatenate(input_values,self.axis)
 
 class Transpose(Operation):
     def __init__(self, A,new_dim_index, name='') -> None:
         super().__init__([A], name)
         self.new_dim_index=new_dim_index
-    def compute(self,A_val):
+    def calculate(self,A_val):
         return np.transpose(A_val,self.new_dim_index)
 
 class Maximum(Operation):
     def __init__(self, A,B, name='') -> None:
         super().__init__([A,B], name)
-    def compute(self,A_val,B_val):
+    def calculate(self,A_val,B_val):
         return np.maximum(A_val,B_val)
 
 class Minimum(Operation):
     def __init__(self, A,B, name='') -> None:
         super().__init__([A,B], name)
-    def compute(self,A_val,B_val):
+    def calculate(self,A_val,B_val):
         return np.minimum(A_val,B_val)
 class Reshape(Operation):
     def __init__(self, A,new_shape, name='') -> None:
         super().__init__([A], name)
         self.newshape=new_shape
-    def compute(self,A_val):
+    def calculate(self,A_val):
         return np.reshape(A_val,self.newshape)
 
 class Zeros_padding(Operation):
@@ -115,7 +124,7 @@ class Zeros_padding(Operation):
         super().__init__([A], name)
         self.zeros_shape=zeros_shape
         self.container=container
-    def compute(self,A_val):
+    def calculate(self,A_val):
         zeros=np.zeros(self.zeros_shape)
         zeros[self.container]=A_val
         return zeros
@@ -124,7 +133,7 @@ class GetItem(Operation):
     def __init__(self, A,items, name='') -> None:
         super().__init__([A], name)
         self.items=items
-    def compute(self,A_val):
+    def calculate(self,A_val):
         if type(self.items)==Variable:
             self.items=self.items.value
         return A_val.__getitem__(self.items)
@@ -133,7 +142,7 @@ class AdjustNeg(Operation):
     def __init__(self, A,items, name='') -> None:
         super().__init__([A], name)
         self.items=items
-    def compute(self,A_val):
+    def calculate(self,A_val):
         a=A_val.copy()
         a.__setitem__(self.items,-a.__getitem__(self.items))
         return a
@@ -141,21 +150,21 @@ class AdjustNeg(Operation):
 class Abs(Operation):
     def __init__(self, A, name='') -> None:
         super().__init__([A], name)
-    def compute(self,A_val):
+    def calculate(self,A_val):
         return np.abs(A_val)
     
 class Reduce_Mean(Reduce_sum):
-    def compute(self, A_val):
+    def calculate(self, A_val):
         return np.mean(A_val,self.axis,keepdims=self.keep_dims)
 
 class Sin(Operation):
     def __init__(self,A, name='') -> None:
         super().__init__([A], name)
-    def compute(self,A_val):
+    def calculate(self,A_val):
         return np.sin(A_val)
 
 class Cos(Sin):
-    def compute(self, A_val):
+    def calculate(self, A_val):
         return np.cos(A_val)
     
 class Reduce_Max(Operation):
@@ -163,7 +172,7 @@ class Reduce_Max(Operation):
         super().__init__([A], name)
         self.axis=axis
         self.keep_dims=keep_dims
-    def compute(self,A_val):
+    def calculate(self,A_val):
         return np.max(A_val,self.axis,keepdims=self.keep_dims)
 
 class Unfold(Operation):
@@ -172,7 +181,7 @@ class Unfold(Operation):
         self.axis=axis
         self.kernel_size=size
         self.step=step
-    def compute(self,A_val):
+    def calculate(self,A_val):
         output_shape=np.array(A_val.shape+(self.kernel_size,))
         output_shape[self.axis]=(output_shape[self.axis]-self.kernel_size)//self.step+1
         transposing=np.arange(len(output_shape))
@@ -185,25 +194,28 @@ class Unfold(Operation):
             final_output[i]=x[i*self.step:i*self.step+self.kernel_size].transpose(transpose_x)
         return final_output.transpose(transposing)
 
+class Prod(Operation):
+    def __init__(self, A, axis=None, keepdims=False, name='') -> None:
+        super().__init__([A], name)
+        self.axis=axis
+        self.keepdims=keepdims
+    def calculate(self,A_val):
+        return np.prod(A_val,self.axis,keepdims=self.keepdims)
+
 def cgsfunc(func):
-    def wrapper(*args,**kvagrs):
-        input_nodes=[]
-        for arg in args:
-            if not type(arg)==Variable:
-                input_nodes.append(Variable(arg))
-            else:
-                input_nodes.append(arg)
-        return func(*input_nodes,**kvagrs)
-    return wrapper
+    # def wrapper(*args,**kwargs):
+    #     return func(*args,**kwargs).astype(**kwargs['dtype'])
+    # return wrapper
+    return func
 
 class Variable:
-    def __init__(self,init_val, name='',ops=None) -> None:
+    def __init__(self,init_val, dtype=None, name='',ops=None) -> None:
         self.name=name
-        self.value=np.array(init_val)
+        self.value=np.array(init_val,dtype=dtype)
         self.ops=ops
         if ops is None:
-            self.ops=InitOp('init_ops')
-    def __getattr__(self, __name: str) -> Any:
+            self.ops=InitOp(name+'_init_ops')
+    def __getattr__(self, __name: str):
         if __name=='shape':
             return self.value.shape
         elif __name=='ndim':
@@ -214,20 +226,18 @@ class Variable:
             return self.value.dtype
         elif __name=='T':
             dims=list(range(self.ndim))
-            dims[-2],dims[-1]=dims[-1],dims[-2]
+            dims.reverse()
             return transpose(self,new_dim_index=dims)
         else:
-            raise AttributeError(__name)
-    def astype(self,dtype='float16'):
+            raise AttributeError(__name, 'isn\'t available')
+    def astype(self,dtype='float32'):
         return Variable(self.value.astype(dtype),self.name,ops=self.ops)
     def assign(self,value):
         if type(value)==Variable:
             value=value.value
         self.value=value
     def assign_add(self,add_val):
-        if type(add_val)==Variable:
-            add_val=add_val.value
-        self.value+=add_val
+        self.assign(self.value+add_val)
     def assign_sub(self,sub_val):
         self.assign_add(-sub_val)
     def __add__(self,other):
@@ -288,135 +298,138 @@ class Variable:
 
 
 @cgsfunc
-def reduce_sum(A,axis=None,keep_dims=False,name=''):
+def reduce_sum(A,axis=None,keep_dims=False,dtype=None,name=''):
     sum_obj=Reduce_sum(A,axis,keep_dims,name)
-    return Variable(sum_obj.compute(A.value),name,sum_obj)
+    return Variable(sum_obj.compute(), dtype, name, sum_obj)
 @cgsfunc
-def neg(a,name=''):
+def neg(a,dtype=None,name=''):
     neg_obj=Neg(a,name+'_ops')
-    return Variable(neg_obj.compute(a.value),name,neg_obj)
+    return Variable(neg_obj.compute(), dtype, name, neg_obj)
 @cgsfunc
-def log(a,name=''):
+def log(a,dtype=None,name=''):
     log_obj=Log(a,name+'_ops')
-    return Variable(log_obj.compute(a.value),name,log_obj)
+    return Variable(log_obj.compute(), dtype, name, log_obj)
 @cgsfunc
-def add(a,b,name=''):
+def add(a,b,dtype=None,name=''):
     add_obj=Add(a,b,name+'_ops')
-    return Variable(add_obj.compute(a.value,b.value),name,add_obj)
+    return Variable(add_obj.compute(), dtype, name, add_obj)
 @cgsfunc
-def sub(a,b,name=''):
+def sub(a,b,dtype=None,name=''):
     sub_obj=Sub(a,b,name+'_ops')
-    return Variable(sub_obj.compute(a.value,b.value),name,sub_obj)
+    return Variable(sub_obj.compute(), dtype, name, sub_obj)
 @cgsfunc
-def mul(a,b,name=''):
+def mul(a,b,dtype=None,name=''):
     mul_obj=Mul(a,b,name+'_ops')
-    return Variable(mul_obj.compute(a.value,b.value),name,mul_obj)
+    return Variable(mul_obj.compute(), dtype, name, mul_obj)
 @cgsfunc
-def div(a,b,name=''):
+def div(a,b,dtype=None,name=''):
     div_obj=Div(a,b,name+'_ops')
-    return Variable(div_obj.compute(a.value,b.value),name,div_obj)
+    return Variable(div_obj.compute(), dtype, name, div_obj)
 @cgsfunc
-def pow(a,b,name=''):
+def pow(a,b,dtype=None,name=''):
     pow_obj=Pow(a,b,name+'_ops')
-    return Variable(pow_obj.compute(a.value,b.value),name,pow_obj)
+    return Variable(pow_obj.compute(), dtype, name, pow_obj)
 @cgsfunc
-def matmul(A,B,name=''):
+def matmul(A,B,dtype=None,name=''):
     matmul_obj=Matmul(A,B,name+'_ops')
-    return Variable(matmul_obj.compute(A.value,B.value),name,matmul_obj)
+    return Variable(matmul_obj.compute(), dtype, name, matmul_obj)
 @cgsfunc
-def expand_dims(A,axis=0,name=''):
+def expand_dims(A,dtype=None,axis=0,name=''):
     exp_dim_obj=Expandim(A,axis,name+'_ops')
-    return Variable(exp_dim_obj.compute(A.value),name,exp_dim_obj)
+    return Variable(exp_dim_obj.compute(), dtype, name, exp_dim_obj)
 @cgsfunc
-def tile(A,reps,name=''):
+def tile(A,reps,dtype=None,name=''):
     tile_obj=Tile(A,reps,name+'_ops')
-    return Variable(tile_obj.compute(A.value),name,tile_obj)
-@cgsfunc
-def cast(A,dtype='float',name=''):
-    cast_obj=Cast(A,dtype,name+'_ops')
-    return Variable(cast_obj.compute(A.value),name,cast_obj)
+    return Variable(tile_obj.compute(), dtype, name, tile_obj)
 # @cgsfunc
 # def concate(*arrs,axis=0,name=''):
 #     cc_obj=Concate(arrs,axis,name)
 #     return Variable(cc_obj.compute([arr.value for arr in arrs]),name,cc_obj)
 @cgsfunc
-def transpose(A,new_dim_index,name=''):
+def transpose(A,new_dim_index,dtype=None,name=''):
     T_obj=Transpose(A,new_dim_index,name+'_ops')
-    return Variable(T_obj.compute(A.value),name,T_obj)
-def constant(A,name=''):
-    init_obj=InitOp(name+'_ops')
-    return Variable(init_obj.compute(A),name,init_obj)
+    return Variable(T_obj.compute(), dtype, name, T_obj)
+def constant(A,dtype=None,name=''):
+    return Variable(A,dtype,name,InitOp(name+'_ops'))
 @cgsfunc
-def maximum(A,B,name=''):
+def maximum(A,B,dtype=None,name=''):
     maximum_obj=Maximum(A,B,name+'_ops')
-    return Variable(maximum_obj.compute(A.value,B.value),name,maximum_obj)
+    return Variable(maximum_obj.compute(), dtype, name, maximum_obj)
 @cgsfunc
-def minimum(A,B,name=''):
+def minimum(A,B,dtype=None,name=''):
     minimum_obj=Minimum(A,B,name+'_ops')
-    return Variable(minimum_obj.compute(A.value,B.value),name,minimum_obj)
+    return Variable(minimum_obj.compute(), dtype, name, minimum_obj)
 @cgsfunc
-def reshape(A,newshape,name=''):
+def reshape(A,newshape,dtype=None,name=''):
     reshaper=Reshape(A,newshape,name+'_ops')
-    return Variable(reshaper.compute(A.value),name,reshaper)
+    return Variable(reshaper.compute(), dtype, name, reshaper)
 @cgsfunc
-def clip(A,min,max,name=''):
+def clip(A,min,max,dtype=None,name=''):
     return maximum(minimum(max,A),min,name=name)
 @cgsfunc
-def zeros_pad(A,zeros_shape,container,name=''):
+def zeros_pad(A,zeros_shape,container,dtype=None,name=''):
     padder=Zeros_padding(A,zeros_shape,container,name+'_ops')
-    return Variable(padder.compute(A.value),name,padder)
+    return Variable(padder.compute(), dtype, name, padder)
 @cgsfunc
-def getitem(A,items,name=''):
+def getitem(A,items,dtype=None,name=''):
     getter=GetItem(A,items,name+'_ops')
-    return Variable(getter.compute(A.value),name,getter)
+    return Variable(getter.compute(), dtype, name, getter)
 @cgsfunc
-def absolute(A,name=''):
+def absolute(A,dtype=None,name=''):
     abs_obj=Abs(A,name+'_ops')
-    return Variable(abs_obj.compute(A.value),name,abs_obj)
+    return Variable(abs_obj.compute(), dtype, name, abs_obj)
 @cgsfunc
-def adjustneg(A,items,name=''):
+def adjustneg(A,items,dtype=None,name=''):
     adjusting=AdjustNeg(A,items,name+'_ops')
-    return Variable(adjusting.compute(A.value),name,adjusting)
+    return Variable(adjusting.compute(), dtype, name, adjusting)
 @cgsfunc
-def sin(A,name=''):
+def sin(A,dtype=None,name=''):
     siner=Sin(A,name+'_ops')
-    return Variable(siner.compute(A.value),name,siner)
+    return Variable(siner.compute(), dtype, name, siner)
 @cgsfunc
-def cos(A,name=''):
+def cos(A,dtype=None,name=''):
     coster=Cos(A,name+'_ops')
-    return Variable(coster.compute(A.value),name,coster)
+    return Variable(coster.compute(), dtype, name, coster)
 @cgsfunc
-def reduce_mean(A,axis=None,keep_dims=False,name=''):
+def reduce_mean(A,axis=None,keep_dims=False,dtype=None,name=''):
     mean_obj=Reduce_Mean(A,axis,keep_dims,name+'_ops')
-    return Variable(mean_obj.compute(A.value),name,mean_obj)
+    return Variable(mean_obj.compute(), dtype, name, mean_obj)
 @cgsfunc
-def reduce_max(A,axis=None,keep_dims=False,name=''):
+def reduce_max(A,axis=None,keep_dims=False,dtype=None,name=''):
     maxer=Reduce_Max(A,axis,keep_dims,name+'_ops')
-    return Variable(maxer.compute(A.value),name,maxer)
+    return Variable(maxer.compute(), dtype, name, maxer)
 @cgsfunc
-def reduce_min(A,axis=None,keep_dims=False,name=''):
-    return -reduce_max(-A,axis=axis,keep_dims=keep_dims,name=name)
+def reduce_min(A,axis=None,keep_dims=False,dtype=None,name=''):
+    return -reduce_max(-A,axis,keep_dims,dtype,name)
 @cgsfunc
-def unfold(A,axis,kernel_size,step,name=''):
+def unfold(A,axis,kernel_size,step,dtype=None,name=''):
     unfolding=Unfold(A,axis,kernel_size,step,name+'_ops')
-    return Variable(unfolding.compute(A.value),name,unfolding)
-
+    return Variable(unfolding.compute(), dtype, name, unfolding)
 @cgsfunc
-def exp(x,name=''):
+def prod(A:Variable,axis=None, keep_dims=False,dtype=None,name=''):
+    prod_obj=Prod(A,axis,keep_dims,name+'_ops')
+    return Variable(prod_obj.compute(), dtype, name, prod_obj)
+# some hight level function
+@cgsfunc
+def exp(x):
     return np.e**x
 @cgsfunc
-def argmax(A,axis=None,keep_dims=False,name=''):
-    return Variable(np.argmax(A.value,axis,keepdims=keep_dims),name)
+def argmax(A,axis=None,keep_dims=False,dtype=None,name=''):
+    return Variable(np.argmax(A.value,axis,keepdims=keep_dims),dtype,name)
 @cgsfunc
-def argmin(A,axis=None,keep_dims=False,name=''):
-    return Variable(np.argmin(A.value,axis,keepdims=keep_dims),name)
+def argmin(A,axis=None,keep_dims=False,dtype=None,name=''):
+    return Variable(np.argmin(A.value,axis,keepdims=keep_dims),dtype,name)
+# some init function
+def ones(shape,dtype=None,name=''):
+    return Variable(np.ones(shape,dtype=dtype),dtype,name)
+def zeros(shape,dtype=None,name=''):
+    return Variable(np.zeros(shape,dtype),dtype,name)
+def full(shape,fill_value,dtype=None,name=''):
+    return Variable(np.full(shape,fill_value,dtype),dtype,name)
+def ones_like(arr_like,dtype=None,name=''):
+    return Variable(np.ones_like(arr_like.value,dtype),dtype,name)
+def zeros_like(arr_like,dtype=None,name=''):
+    return Variable(np.zeros_like(arr_like.value,dtype),dtype,name)
+def full_like(arr_like,fill_value,dtype=None,name=''):
+    return Variable(np.full_like(arr_like.value,fill_value,dtype),dtype,name)
 
-def traverse_postorder(var_obj):
-    nodes_postorder=[]
-    def recurse(node):
-        if hasattr(node.ops,'input_nodes'):
-            for input_node in node.ops.input_nodes:
-                recurse(input_node)
-        nodes_postorder.append(node)
-    recurse(var_obj)
-    return nodes_postorder

@@ -1,4 +1,4 @@
-from CGs import *
+from .CGs import *
 _gradient_registry={}
 class RegGrad:
     def __init__(self,op_type) -> None:
@@ -94,9 +94,6 @@ def _expandim_gradient(node,grad):
 def _tile_gradient(node,grad):
     A=node.ops.input_nodes[0]
     return [reshape(grad,newshape=tuple(node.ops.reps)+tuple(A.shape))]
-@RegGrad('Cast')
-def _cast_gradient(node,grad):
-    return [cast(grad,dtype=node.ops.dtype)]
 @RegGrad('Transpose')
 def _transpose_gradient(node,grad):
     reT=np.zeros(len(node.ops.new_dim_index),'int')
@@ -150,15 +147,22 @@ def _unfold_gradient(node,grad):
     A=node.ops.input_nodes[0]
     transposing=np.arange(grad.ndim)
     transposing[0],transposing[node.ops.axis]=transposing[node.ops.axis],transposing[0]
-    final=transpose(Variable(np.zeros_like(A.value)),new_dim_index=transposing[:-1])
+    final=transpose(zeros_like(A),new_dim_index=transposing[:-1])
     grad=transpose(grad,new_dim_index=transposing)
     transpose_x=(-1,)+np.arange(A.ndim)
     for i in range(grad.shape[0]):
         final+=zeros_pad(transpose(grad[i],new_dim_index=transpose_x),zeros_shape=final.shape,container=slice(i*node.ops.step,i*node.ops.step+node.ops.kernel_size))
     return [transpose(final,new_dim_index=transposing[:-1])]
+@RegGrad('Prod')
+def _pod_gradient(node:Variable,grad:Variable):
+    A=node.ops.input_nodes[0]
+    if not node.ops.keepdims and node.ops.axis is not None:
+        node=expand_dims(node,axis=node.ops.axis)
+        grad=expand_dims(grad,axis=node.ops.axis)
+    return [grad*node/A]
 
 def gradients(target_var):
-    grad_dict={target_var:Variable(np.ones_like(target_var.value))}
+    grad_dict={target_var:ones_like(target_var)}
     steps=traverse_postorder(target_var)
     seen=set()
     steps=[i for i in steps if hasattr(i.ops,'input_nodes') and not (i in seen or seen.add(i))]
