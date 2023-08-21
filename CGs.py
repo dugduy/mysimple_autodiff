@@ -334,7 +334,7 @@ def matmul(A,B,dtype=None,name=''):
     matmul_obj=Matmul(A,B,name+'_ops')
     return Variable(matmul_obj.compute(), dtype, name, matmul_obj)
 @cgsfunc
-def expand_dims(A,dtype=None,axis=0,name=''):
+def expand_dims(A,axis=0,dtype=None,name=''):
     exp_dim_obj=Expandim(A,axis,name+'_ops')
     return Variable(exp_dim_obj.compute(), dtype, name, exp_dim_obj)
 @cgsfunc
@@ -419,17 +419,3 @@ def argmax(A,axis=None,keep_dims=False,dtype=None,name=''):
 @cgsfunc
 def argmin(A,axis=None,keep_dims=False,dtype=None,name=''):
     return Variable(np.argmin(A.value,axis,keepdims=keep_dims),dtype,name)
-# some init function
-def ones(shape,dtype=None,name=''):
-    return Variable(np.ones(shape,dtype=dtype),dtype,name)
-def zeros(shape,dtype=None,name=''):
-    return Variable(np.zeros(shape,dtype),dtype,name)
-def full(shape,fill_value,dtype=None,name=''):
-    return Variable(np.full(shape,fill_value,dtype),dtype,name)
-def ones_like(arr_like,dtype=None,name=''):
-    return Variable(np.ones_like(arr_like.value,dtype),dtype,name)
-def zeros_like(arr_like,dtype=None,name=''):
-    return Variable(np.zeros_like(arr_like.value,dtype),dtype,name)
-def full_like(arr_like,fill_value,dtype=None,name=''):
-    return Variable(np.full_like(arr_like.value,fill_value,dtype),dtype,name)
-

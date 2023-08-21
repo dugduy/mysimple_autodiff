@@ -1,4 +1,6 @@
 from .CGs import *
+from .numeric import *
+
 _gradient_registry={}
 class RegGrad:
     def __init__(self,op_type) -> None:
