@@ -231,7 +231,7 @@ class Variable:
         else:
             raise AttributeError(__name, 'isn\'t available')
     def astype(self,dtype='float32'):
-        return Variable(self.value.astype(dtype),self.name,ops=self.ops)
+        return Variable(self.value,dtype,self.name,ops=self.ops)
     def assign(self,value):
         if type(value)==Variable:
             value=value.value

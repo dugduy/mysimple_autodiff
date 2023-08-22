@@ -1,4 +1,4 @@
-from CGs import Variable,np
+from .CGs import Variable,np
 # array creations
 def ones(shape,dtype=None,name=''):
     return Variable(np.ones(shape,dtype=dtype),dtype,name)

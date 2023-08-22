@@ -137,7 +137,7 @@ def _cos_gradient(node,grad):
 @RegGrad('Reduce_Max')
 def _max_gradient(node,grad):
     A=node.ops.input_nodes[0]
-    where_eq_max=(A==reduce_max(A,axis=node.ops.axis,keep_dims=True)).astype('float32')
+    where_eq_max=(A==reduce_max(A,axis=node.ops.axis,keep_dims=True))
     output_shape=np.array(A.shape)
     if type(node.ops.axis)==tuple:
         output_shape[list(node.ops.axis)]=1
